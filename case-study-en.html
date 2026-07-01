@@ -320,7 +320,7 @@ footer .brand{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;text-
     </div>
     <div class="eyebrow"><span class="dot"></span>Product Case Study</div>
     <h1 style="margin-top:16px">Shared with You</h1>
-    <video class="hero-vid" src="showcase.mp4" autoplay muted loop playsinline preload="metadata"></video>
+    <video class="hero-vid" src="showcase.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
   </section>
 
   <!-- ===== USER SCENARIO & INSIGHTS ===== -->
@@ -666,21 +666,33 @@ footer .brand{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;text-
   var vids=[].slice.call(document.querySelectorAll(".screen.vid"));
   vids.forEach(function(sc){
     var v=sc.querySelector("video"); if(!v) return;
+    // iOS Safari: muted inline autoplay only works if these are enforced as properties/attrs
+    v.muted=true; v.defaultMuted=true; v.playsInline=true;
+    v.setAttribute("muted",""); v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline","");
     var plays=0, done=false;
     function mark(){ sc.classList.toggle("playing", !v.paused); }
-    function go(){ try{v.currentTime=0;}catch(e){} var p=v.play(); if(p&&p.catch)p.catch(function(){}); }
+    function tryPlay(){ v.muted=true; var p=v.play(); if(p&&p.catch)p.catch(function(){}); }
+    function go(){ v.muted=true; try{v.currentTime=0;}catch(e){} tryPlay(); }
     v.addEventListener("play", mark);
     v.addEventListener("pause", mark);
     v.addEventListener("ended", function(){ plays++; if(plays<2){ go(); } else { done=true; v.pause(); } });
     sc.addEventListener("click", function(){ if(v.paused){ plays=0; done=false; go(); } else { v.pause(); } });
     if("IntersectionObserver" in window){
       var io=new IntersectionObserver(function(es){ es.forEach(function(e){
-        if(e.isIntersecting){ if(!done && v.paused){ var p=v.play(); if(p&&p.catch)p.catch(function(){}); } }
+        if(e.isIntersecting){ if(!done && v.paused){ tryPlay(); } }
         else { if(!v.paused) v.pause(); }
-      }); },{threshold:0.5});
+      }); },{threshold:0.35});
       io.observe(sc);
     }
   });
+  // hero: force muted inline autoplay on mobile (iOS can ignore the attribute after load)
+  var hero=document.querySelector(".hero-vid");
+  if(hero){
+    hero.muted=true; hero.defaultMuted=true; hero.playsInline=true;
+    function kick(){ var p=hero.play(); if(p&&p.catch)p.catch(function(){}); }
+    hero.addEventListener("loadedmetadata", kick); kick();
+    document.addEventListener("touchstart", function once(){ kick(); document.removeEventListener("touchstart", once); }, {passive:true});
+  }
 })();
 </script>
 </body>
